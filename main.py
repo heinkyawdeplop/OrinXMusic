@@ -1,9 +1,8 @@
-import asyncio
+import os
 from pyrogram import Client, filters
 from pytgcalls import PyTgCalls
 from pytgcalls.types.input_stream import AudioPiped
 from yt_dlp import YoutubeDL
-import os
 
 API_ID = int(os.getenv("31399150"))
 API_HASH = os.getenv("53d2e8122b1da92ede536640ed7f42de")
@@ -16,30 +15,36 @@ assistant = Client("assistant", api_id=API_ID, api_hash=API_HASH, session_string
 vc = PyTgCalls(assistant)
 
 def get_audio(query):
-    with YoutubeDL({"format": "bestaudio", "quiet": True}) as ydl:
+    ydl_opts = {"format": "bestaudio", "quiet": True}
+    with YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(f"ytsearch:{query}", download=False)
         return info["entries"][0]["url"], info["entries"][0]["title"]
 
-@bot.on_message(filters.command("play"))
-async def play(_, msg):
-    if len(msg.command) < 2:
-        return await msg.reply("Give song name")
+@bot.on_message(filters.command("start"))
+def start(_, m):
+    m.reply("🎧 Music Bot Ready")
 
-    query = " ".join(msg.command[1:])
+@bot.on_message(filters.command("play"))
+def play(_, m):
+    if len(m.command) < 2:
+        return m.reply("Usage: /play song name")
+
+    query = " ".join(m.command[1:])
     stream, title = get_audio(query)
 
-    await vc.join_group_call(
-        msg.chat.id,
+    vc.join_group_call(
+        m.chat.id,
         AudioPiped(stream)
     )
 
-    await msg.reply(f"▶️ Playing: {title}")
+    m.reply(f"▶️ Playing: {title}")
 
 async def main():
     await bot.start()
     await assistant.start()
     await vc.start()
-    print("VC Bot Running")
+    print("VC Music Bot Running")
     await asyncio.Event().wait()
 
+import asyncio
 asyncio.run(main())
